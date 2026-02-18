@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "LanStation Traffic Monitor",
+  "description": "Monitor and analyze HTTP requests from LanStation server.",
+  "version": "0.1",
+
+  "permissions": ["storage"],
+
+
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LanStation Traffic Monitor"
+  }
+}
