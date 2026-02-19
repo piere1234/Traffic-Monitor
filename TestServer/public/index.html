@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            color: #000000;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        p {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: 1px solid #cccccc;
+            background: #f0f0f0;
+            color: #333333;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #e0e0e0;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+        }
+
+        .log {
+            border: 1px solid #cccccc;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Server</h1>
+    <p>Connect extension to: http://localhost:3000</p>
+    <p>API Key: trafficapikey</p>
+
+    <div class="controls">
+        <button onclick="sendRequest('/test/ok')">Send Success</button>
+        <button onclick="sendRequest('/test/error')">Send Error</button>
+        <button onclick="sendRequest('/test/notfound')">Send 404</button>
+        <button onclick="sendRequest('/test/slow')">Send Slow</button>
+        <br>
+        <button onclick="generateBurst(10)">Generate 10 Requests</button>
+        <button onclick="generateBurst(50)">Generate 50 Requests</button>
+    </div>
+
+    <div class="log" id="log">
+        <div class="log-entry">[Ready]</div>
+    </div>
+
+    <script>
+        const logEl = document.getElementById('log');
+
+        function log(message) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function sendRequest(path) {
+            try {
+                const res = await fetch(path);
+                log(`${path} - ${res.status}`);
+            } catch (err) {
+                log(`${path} - Error: ${err.message}`);
+            }
+        }
+
+        async function generateBurst(count) {
+            log(`Sending ${count} requests...`);
+            const endpoints = ['/test/ok', '/test/error', '/test/notfound', '/test/slow'];
+            for (let i = 0; i < count; i++) {
+                const endpoint = endpoints[Math.floor(Math.random() * endpoints.length)];
+                sendRequest(endpoint);
+                await new Promise(r => setTimeout(r, 50));
+            }
+            log(`Burst complete`);
+        }
+    </script>
+</body>
+</html>

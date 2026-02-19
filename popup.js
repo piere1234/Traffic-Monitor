@@ -251,12 +251,12 @@ function fetchServerMetrics(apiKey) {
     .then(data => {
       console.log('[Metrics] Got server metrics:', data);
       performanceMetrics = {
-        avgResponseTime: data.avgResponseTime || '-',
-        maxResponseTime: data.maxResponseTime || '-',
-        successRate: data.successRate || '-',
-        errorRate: data.errorRate || '-',
-        totalRequests: data.totalRequests || '-',
-        requestsPerMinute: data.requestsPerMinute ? data.requestsPerMinute + ' req/min' : '-'
+        avgResponseTime: data.fcp || '-',
+        maxResponseTime: data.lcp || '-',
+        successRate: data.cls || '-',
+        errorRate: data.tbt || '-',
+        totalRequests: data.speedIndex || '-',
+        requestsPerMinute: data.domReady || '-'
       };
       updateMetricsUI();
     })
