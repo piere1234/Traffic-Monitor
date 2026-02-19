@@ -212,30 +212,30 @@
       <div id="analysis"></div>
     </div>
     <div class="section" id="metricsSection" style="display: none;">
-      <h2>Performance Metrics</h2>
+      <h2>Server Performance Metrics</h2>
       <div id="metrics" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
         <div style="background: #1f2937; padding: 8px; border-radius: 4px;">
-          <div style="color: #9aa3b2; margin-bottom: 4px;">FCP</div>
+          <div style="color: #9aa3b2; margin-bottom: 4px;">Avg Response Time</div>
           <div id="fcp" style="color: #60a5fa; font-weight: bold;">-</div>
         </div>
         <div style="background: #1f2937; padding: 8px; border-radius: 4px;">
-          <div style="color: #9aa3b2; margin-bottom: 4px;">LCP</div>
+          <div style="color: #9aa3b2; margin-bottom: 4px;">Max Response Time</div>
           <div id="lcp" style="color: #60a5fa; font-weight: bold;">-</div>
         </div>
         <div style="background: #1f2937; padding: 8px; border-radius: 4px;">
-          <div style="color: #9aa3b2; margin-bottom: 4px;">CLS</div>
+          <div style="color: #9aa3b2; margin-bottom: 4px;">Success Rate</div>
           <div id="cls" style="color: #60a5fa; font-weight: bold;">-</div>
         </div>
         <div style="background: #1f2937; padding: 8px; border-radius: 4px;">
-          <div style="color: #9aa3b2; margin-bottom: 4px;">TBT</div>
+          <div style="color: #9aa3b2; margin-bottom: 4px;">Error Rate</div>
           <div id="tbt" style="color: #60a5fa; font-weight: bold;">-</div>
         </div>
         <div style="background: #1f2937; padding: 8px; border-radius: 4px;">
-          <div style="color: #9aa3b2; margin-bottom: 4px;">Speed Index</div>
+          <div style="color: #9aa3b2; margin-bottom: 4px;">Total Requests</div>
           <div id="speedIndex" style="color: #60a5fa; font-weight: bold;">-</div>
         </div>
         <div style="background: #1f2937; padding: 8px; border-radius: 4px;">
-          <div style="color: #9aa3b2; margin-bottom: 4px;">DOM Ready</div>
+          <div style="color: #9aa3b2; margin-bottom: 4px;">Requests/Minute</div>
           <div id="domReady" style="color: #60a5fa; font-weight: bold;">-</div>
         </div>
       </div>
@@ -258,13 +258,17 @@
         <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #374151;">
           <div style="color: #9aa3b2; margin-bottom: 4px;">Suspicious IPs</div>
           <div id="suspiciousIPs" style="color: #ef4444; font-size: 9px;">None detected</div>
+          <div id="blockedIPs" style="color: #9aa3b2; font-size: 9px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #374151;">
+            <div style="margin-bottom: 4px;">Blocked IPs:</div>
+            <div id="blockedIPsList">None</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="section" id="chartSection" style="display: none;">
+    <div class="section" id="chartSection" style="display: none; margin-bottom: 24px;">
       <h2>Response Times</h2>
-      <div style="position: relative; height: 280px; width: 100%;">
-        <canvas id="responseChart" width="400" height="280"></canvas>
+      <div style="position: relative; height: 300px; width: 100%;">
+        <canvas id="responseChart" width="400" height="300"></canvas>
       </div>
     </div>
     <div class="section">

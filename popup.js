@@ -1,89 +1,30 @@
 // popup.js - LanStation Traffic Monitor (simple HTTP polling)
 
 let lanstationUrl = null;
+let apiKey = null;
 let trafficLog = [];
 let refreshInterval = null;
 let chart = null;
 let performanceMetrics = {
-  fcp: null,
-  lcp: null,
-  cls: null,
-  tbt: null,
-  speedIndex: null,
-  domReady: null
+  avgResponseTime: null,
+  maxResponseTime: null,
+  successRate: null,
+  errorRate: null,
+  totalRequests: null,
+  requestsPerMinute: null
 };
 
-// Capture performance metrics using web-vitals
-if (typeof window.webVitals !== 'undefined') {
-  console.log('[Metrics] web-vitals library loaded');
-  
-  // First Contentful Paint
-  window.webVitals.onCLS(metric => {
-    performanceMetrics.cls = metric.value.toFixed(3);
-    updateMetricsUI();
-    console.log('[Metrics] CLS:', metric.value);
-  });
-  
-  // Largest Contentful Paint
-  window.webVitals.onLCP(metric => {
-    performanceMetrics.lcp = metric.value.toFixed(0) + 'ms';
-    updateMetricsUI();
-    console.log('[Metrics] LCP:', metric.value);
-  });
-  
-  // First Contentful Paint
-  window.webVitals.onFCP(metric => {
-    performanceMetrics.fcp = metric.value.toFixed(0) + 'ms';
-    updateMetricsUI();
-    console.log('[Metrics] FCP:', metric.value);
-  });
-  
-  // Total Blocking Time
-  window.webVitals.onTTFB(metric => {
-    console.log('[Metrics] TTFB:', metric.value);
-  });
-  
-  // Interaction to Next Paint (similar to TBT)
-  window.webVitals.onINP(metric => {
-    performanceMetrics.tbt = metric.value.toFixed(0) + 'ms';
-    updateMetricsUI();
-    console.log('[Metrics] INP (Total Blocking Time):', metric.value);
-  });
-}
-
-// Measure DOM Ready Time
-window.addEventListener('DOMContentLoaded', () => {
-  if (performance.timing) {
-    const domReady = performance.timing.domContentLoadedEventEnd - performance.timing.domContentLoadedEventStart;
-    if (domReady > 0) {
-      performanceMetrics.domReady = domReady.toFixed(0) + 'ms';
-      console.log('[Metrics] DOM Ready:', domReady);
-    }
-  }
-  updateMetricsUI();
-  console.log('[Extension] DOM loaded, Chart.js available:', typeof Chart !== 'undefined');
-});
-
-// Calculate Speed Index approximation
-window.addEventListener('load', () => {
-  if (performance.timing) {
-    const speedIndex = Math.max(0, performance.timing.loadEventEnd - performance.timing.navigationStart);
-    if (speedIndex > 0) {
-      performanceMetrics.speedIndex = speedIndex.toFixed(0) + 'ms';
-      console.log('[Metrics] Speed Index:', speedIndex);
-    }
-  }
-  updateMetricsUI();
-});
+// Server metrics will be fetched from /api/metrics endpoint
+console.log('[Metrics] Initializing server metrics fetching');
 
 function updateMetricsUI() {
   const metricsSection = document.getElementById('metricsSection');
-  document.getElementById('fcp').textContent = performanceMetrics.fcp || '-';
-  document.getElementById('lcp').textContent = performanceMetrics.lcp || '-';
-  document.getElementById('cls').textContent = performanceMetrics.cls || '-';
-  document.getElementById('tbt').textContent = performanceMetrics.tbt || '-';
-  document.getElementById('speedIndex').textContent = performanceMetrics.speedIndex || '-';
-  document.getElementById('domReady').textContent = performanceMetrics.domReady || '-';
+  document.getElementById('fcp').textContent = performanceMetrics.avgResponseTime || '-';
+  document.getElementById('lcp').textContent = performanceMetrics.maxResponseTime || '-';
+  document.getElementById('cls').textContent = performanceMetrics.successRate || '-';
+  document.getElementById('tbt').textContent = performanceMetrics.errorRate || '-';
+  document.getElementById('speedIndex').textContent = performanceMetrics.totalRequests || '-';
+  document.getElementById('domReady').textContent = performanceMetrics.requestsPerMinute || '-';
   
   // Show metrics section once any metric is captured
   if (metricsSection && Object.values(performanceMetrics).some(v => v !== null)) {
@@ -206,10 +147,11 @@ function connect(url, apiKey) {
       
       renderTraffic();
       fetchSlowlorisMetrics(apiKey);
+      fetchServerMetrics(apiKey);
       
-      // Poll for updates every 1 second
+      // Poll for updates every 0.1 seconds
       if (refreshInterval) clearInterval(refreshInterval);
-      refreshInterval = setInterval(() => fetchTraffic(apiKey), 1000);
+      refreshInterval = setInterval(() => fetchTraffic(apiKey), 100);
     })
     .catch(error => {
       console.error('Connection failed:', error);
@@ -264,6 +206,9 @@ function fetchTraffic(apiKey) {
   
   // Also fetch Slowloris metrics
   fetchSlowlorisMetrics(apiKey);
+  
+  // Also fetch Server metrics
+  fetchServerMetrics(apiKey);
 }
 
 function fetchSlowlorisMetrics(apiKey) {
@@ -286,6 +231,37 @@ function fetchSlowlorisMetrics(apiKey) {
     })
     .catch(error => {
       console.error('[Slowloris] Fetch failed:', error);
+    });
+}
+
+function fetchServerMetrics(apiKey) {
+  if (!lanstationUrl || !apiKey) return;
+  
+  fetch(`${lanstationUrl}/api/metrics`, { 
+    method: 'GET', 
+    mode: 'cors',
+    credentials: 'omit',
+    headers: { 'X-Traffic-Key': apiKey }
+  })
+    .then(resp => {
+      console.log('[Metrics] API response status:', resp.status);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return resp.json();
+    })
+    .then(data => {
+      console.log('[Metrics] Got server metrics:', data);
+      performanceMetrics = {
+        avgResponseTime: data.avgResponseTime || '-',
+        maxResponseTime: data.maxResponseTime || '-',
+        successRate: data.successRate || '-',
+        errorRate: data.errorRate || '-',
+        totalRequests: data.totalRequests || '-',
+        requestsPerMinute: data.requestsPerMinute ? data.requestsPerMinute + ' req/min' : '-'
+      };
+      updateMetricsUI();
+    })
+    .catch(error => {
+      console.error('[Metrics] Fetch failed:', error);
     });
 }
 
@@ -329,16 +305,158 @@ function updateSlowlorisUI(metrics) {
   if (ipsEl) {
     if (metrics.suspiciousIPs && metrics.suspiciousIPs.length > 0) {
       ipsEl.innerHTML = metrics.suspiciousIPs.map(ip => 
-        `<div>${ip.ip} - ${ip.hung} hung connection(s)</div>`
+        `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+          <span>${ip.ip} - ${ip.hung} hung connection(s)</span>
+          <button class="block-ip-btn" data-ip="${ip.ip}" style="font-size: 8px; padding: 3px 6px; background: #ef4444; color: white; margin-left: 8px;">Block</button>
+        </div>`
       ).join('');
+      
+      // Attach event listeners to block buttons
+      ipsEl.querySelectorAll('.block-ip-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const ipToBlock = btn.getAttribute('data-ip');
+          blockIP(ipToBlock);
+        });
+      });
     } else if (metrics.incompleteConnections && metrics.incompleteConnections.length > 0) {
       // Show incomplete connections if no hung ones
       ipsEl.innerHTML = metrics.incompleteConnections.filter(x => x.count > 5).map(ip => 
-        `<div>${ip.ip} - ${ip.count} incomplete connection(s)</div>`
+        `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+          <span>${ip.ip} - ${ip.count} incomplete connection(s)</span>
+          <button class="block-ip-btn" data-ip="${ip.ip}" style="font-size: 8px; padding: 3px 6px; background: #ef4444; color: white; margin-left: 8px;">Block</button>
+        </div>`
       ).join('') || 'None detected';
+      
+      // Attach event listeners to block buttons
+      ipsEl.querySelectorAll('.block-ip-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const ipToBlock = btn.getAttribute('data-ip');
+          blockIP(ipToBlock);
+        });
+      });
     } else {
       ipsEl.innerHTML = 'None detected';
     }
+  }
+  
+  // Update blocked IPs list
+  updateBlockedIPsList();
+}
+
+// Block an IP address
+async function blockIP(ip) {
+  if (!lanstationUrl || !apiKeyInput.value) {
+    alert('Not connected to LanStation');
+    return;
+  }
+  
+  if (!confirm(`Block IP ${ip}?\n\nThis will prevent all requests from this IP address.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${lanstationUrl}/api/block-ip`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Traffic-Key': apiKeyInput.value
+      },
+      body: JSON.stringify({ ip })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to block IP: ${response.status}`);
+    }
+    
+    alert(`Successfully blocked IP: ${ip}`);
+    // Refresh the traffic data to update the UI
+    fetchTraffic(apiKeyInput.value);
+  } catch (error) {
+    console.error('Error blocking IP:', error);
+    alert(`Error blocking IP: ${error.message}`);
+  }
+}
+
+// Unblock an IP address
+async function unblockIP(ip) {
+  if (!lanstationUrl || !apiKeyInput.value) {
+    alert('Not connected to LanStation');
+    return;
+  }
+  
+  if (!confirm(`Unblock IP ${ip}?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${lanstationUrl}/api/unblock-ip`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Traffic-Key': apiKeyInput.value
+      },
+      body: JSON.stringify({ ip })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to unblock IP: ${response.status}`);
+    }
+    
+    alert(`Successfully unblocked IP: ${ip}`);
+    // Refresh the traffic data to update the UI
+    fetchTraffic(apiKeyInput.value);
+  } catch (error) {
+    console.error('Error unblocking IP:', error);
+    alert(`Error unblocking IP: ${error.message}`);
+  }
+}
+
+// Update the list of blocked IPs in the UI
+async function updateBlockedIPsList() {
+  const blockedIPsListEl = document.getElementById('blockedIPsList');
+  if (!blockedIPsListEl || !lanstationUrl || !apiKeyInput.value) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${lanstationUrl}/api/blocked-ips`, {
+      method: 'GET',
+      headers: {
+        'X-Traffic-Key': apiKeyInput.value
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blocked IPs: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const blockedIPs = data.blockedIPs || [];
+    
+    if (blockedIPs.length === 0) {
+      blockedIPsListEl.innerHTML = 'None';
+    } else {
+      blockedIPsListEl.innerHTML = blockedIPs.map(ip => 
+        `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+          <span>${ip}</span>
+          <button class="unblock-ip-btn" data-ip="${ip}" style="font-size: 8px; padding: 3px 6px; background: #10b981; color: white; margin-left: 8px;">Unblock</button>
+        </div>`
+      ).join('');
+      
+      // Attach event listeners to unblock buttons
+      blockedIPsListEl.querySelectorAll('.unblock-ip-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const ipToUnblock = btn.getAttribute('data-ip');
+          unblockIP(ipToUnblock);
+        });
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching blocked IPs:', error);
+    // Silently fail - don't alert for this background operation
   }
 }
 
@@ -351,7 +469,13 @@ refreshBtn.addEventListener('click', () => {
 
 // Filter out extension's own API traffic requests
 function getFilteredTraffic() {
-  return trafficLog.filter(entry => entry.path !== '/api/traffic' && entry.path !== '/api/slowloris');
+  return trafficLog.filter(entry => 
+    entry.path !== '/api/traffic' && 
+    entry.path !== '/api/slowloris' && 
+    entry.path !== '/api/block-ip' && 
+    entry.path !== '/api/unblock-ip' && 
+    entry.path !== '/api/blocked-ips'
+  );
 }
 
 function renderTraffic() {
@@ -581,10 +705,7 @@ function renderChart() {
         scales: {
           x: {
             ticks: {
-              color: '#9aa3b2',
-              font: { size: 9 },
-              maxRotation: 45,
-              minRotation: 0
+              display: false
             },
             grid: {
               color: 'rgba(107, 114, 128, 0.1)'
