@@ -1,6 +1,6 @@
-// popup.js - LanStation Traffic Monitor (simple HTTP polling)
+// popup.js - Traffic Monitor (simple HTTP polling)
 
-let lanstationUrl = null;
+let serverUrl = null;
 let apiKey = null;
 let trafficLog = [];
 let refreshInterval = null;
@@ -33,7 +33,7 @@ function updateMetricsUI() {
 }
 
 // DOM elements
-const lanstationUrlInput = document.getElementById('lanstationUrl');
+const serverUrlInput = document.getElementById('serverUrl');
 const apiKeyInput = document.getElementById('apiKey');
 const connectBtn = document.getElementById('connect');
 const testBtn = document.getElementById('test');
@@ -50,9 +50,9 @@ const metricsSection = document.getElementById('metricsSection');
 const slowlorisSection = document.getElementById('slowlorisSection');
 
 // Load saved URL and API key on startup
-chrome.storage.local.get(['lanstationUrl', 'apiKey'], (result) => {
-  if (result.lanstationUrl) {
-    lanstationUrlInput.value = result.lanstationUrl;
+chrome.storage.local.get(['serverUrl', 'apiKey'], (result) => {
+  if (result.serverUrl) {
+    serverUrlInput.value = result.serverUrl;
   }
   if (result.apiKey) {
     apiKeyInput.value = result.apiKey;
@@ -61,11 +61,11 @@ chrome.storage.local.get(['lanstationUrl', 'apiKey'], (result) => {
 
 // Connect button handler
 connectBtn.addEventListener('click', () => {
-  const url = lanstationUrlInput.value.trim();
+  const url = serverUrlInput.value.trim();
   const apiKey = apiKeyInput.value.trim();
   
   if (!url) {
-    alert('Please enter a LanStation URL');
+    alert('Please enter a server URL');
     return;
   }
 
@@ -84,11 +84,11 @@ connectBtn.addEventListener('click', () => {
 
 // Test button handler
 testBtn.addEventListener('click', () => {
-  const url = lanstationUrlInput.value.trim().replace(/\/$/, '');
+  const url = serverUrlInput.value.trim().replace(/\/$/, '');
   const apiKey = apiKeyInput.value.trim();
   
   if (!url) {
-    alert('Please enter a LanStation URL');
+    alert('Please enter a server URL');
     return;
   }
 
@@ -136,8 +136,8 @@ function connect(url, apiKey) {
       return resp.json();
     })
     .then(data => {
-      lanstationUrl = url;
-      chrome.storage.local.set({ lanstationUrl, apiKey });
+      serverUrl = url;
+      chrome.storage.local.set({ serverUrl, apiKey });
       
       trafficLog = Array.isArray(data) ? data : [];
       connectionStatus.textContent = 'Connected';
@@ -155,7 +155,7 @@ function connect(url, apiKey) {
     })
     .catch(error => {
       console.error('Connection failed:', error);
-      alert('Failed to connect: ' + error.message + '\n\nMake sure:\n1. LanStation server is running\n2. Use your server IP (e.g., http://192.168.1.25)\n3. API Key is correct: trafficapikey\n\nCheck console for details.');
+      alert('Failed to connect: ' + error.message + '\n\nMake sure:\n1. The server is running\n2. Use your server IP (e.g., http://192.168.1.25)\n3. API Key is correct: trafficapikey\n\nCheck console for details.');
       connectBtn.disabled = false;
       connectBtn.textContent = 'Connect';
     });
@@ -166,7 +166,7 @@ function disconnect() {
     clearInterval(refreshInterval);
     refreshInterval = null;
   }
-  lanstationUrl = null;
+  serverUrl = null;
   trafficLog = [];
   connectionStatus.textContent = 'Not Connected';
   connectionStatus.classList.remove('connected');
@@ -176,9 +176,9 @@ function disconnect() {
 }
 
 function fetchTraffic(apiKey) {
-  if (!lanstationUrl || !apiKey) return;
+  if (!serverUrl || !apiKey) return;
   
-  fetch(`${lanstationUrl}/api/traffic`, { 
+  fetch(`${serverUrl}/api/traffic`, { 
     method: 'GET', 
     mode: 'cors',
     credentials: 'omit',
@@ -212,9 +212,9 @@ function fetchTraffic(apiKey) {
 }
 
 function fetchSlowlorisMetrics(apiKey) {
-  if (!lanstationUrl || !apiKey) return;
+  if (!serverUrl || !apiKey) return;
   
-  fetch(`${lanstationUrl}/api/slowloris`, { 
+  fetch(`${serverUrl}/api/slowloris`, { 
     method: 'GET', 
     mode: 'cors',
     credentials: 'omit',
@@ -235,9 +235,9 @@ function fetchSlowlorisMetrics(apiKey) {
 }
 
 function fetchServerMetrics(apiKey) {
-  if (!lanstationUrl || !apiKey) return;
+  if (!serverUrl || !apiKey) return;
   
-  fetch(`${lanstationUrl}/api/metrics`, { 
+  fetch(`${serverUrl}/api/metrics`, { 
     method: 'GET', 
     mode: 'cors',
     credentials: 'omit',
@@ -347,8 +347,8 @@ function updateSlowlorisUI(metrics) {
 
 // Block an IP address
 async function blockIP(ip) {
-  if (!lanstationUrl || !apiKeyInput.value) {
-    alert('Not connected to LanStation');
+  if (!serverUrl || !apiKeyInput.value) {
+    alert('Not connected to server');
     return;
   }
   
@@ -357,7 +357,7 @@ async function blockIP(ip) {
   }
   
   try {
-    const response = await fetch(`${lanstationUrl}/api/block-ip`, {
+    const response = await fetch(`${serverUrl}/api/block-ip`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -381,8 +381,8 @@ async function blockIP(ip) {
 
 // Unblock an IP address
 async function unblockIP(ip) {
-  if (!lanstationUrl || !apiKeyInput.value) {
-    alert('Not connected to LanStation');
+  if (!serverUrl || !apiKeyInput.value) {
+    alert('Not connected to server');
     return;
   }
   
@@ -391,7 +391,7 @@ async function unblockIP(ip) {
   }
   
   try {
-    const response = await fetch(`${lanstationUrl}/api/unblock-ip`, {
+    const response = await fetch(`${serverUrl}/api/unblock-ip`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -416,12 +416,12 @@ async function unblockIP(ip) {
 // Update the list of blocked IPs in the UI
 async function updateBlockedIPsList() {
   const blockedIPsListEl = document.getElementById('blockedIPsList');
-  if (!blockedIPsListEl || !lanstationUrl || !apiKeyInput.value) {
+  if (!blockedIPsListEl || !serverUrl || !apiKeyInput.value) {
     return;
   }
   
   try {
-    const response = await fetch(`${lanstationUrl}/api/blocked-ips`, {
+    const response = await fetch(`${serverUrl}/api/blocked-ips`, {
       method: 'GET',
       headers: {
         'X-Traffic-Key': apiKeyInput.value
@@ -462,7 +462,7 @@ async function updateBlockedIPsList() {
 
 // Refresh button handler
 refreshBtn.addEventListener('click', () => {
-  if (lanstationUrl && apiKeyInput.value) {
+  if (serverUrl && apiKeyInput.value) {
     fetchTraffic(apiKeyInput.value);
   }
 });

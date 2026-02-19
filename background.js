@@ -1,6 +1,6 @@
-// background.js - LanStation Traffic Monitor Analysis
+// background.js - Traffic Monitor Analysis
 
-console.log("[LanStation Monitor] Service worker started");
+console.log("[Traffic Monitor] Service worker started");
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

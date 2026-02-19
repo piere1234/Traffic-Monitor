@@ -1,6 +1,6 @@
 # Extension Test Server
 
-A minimal test server for the LanStation extension.
+A minimal test server for the Traffic Monitor extension.
 
 ## Setup
 
